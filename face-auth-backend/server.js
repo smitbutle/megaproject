@@ -4,6 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const cors = require('cors');
 const port = 5000;
+const THRESHOLD = 0.3;
 
 // Middleware
 app.use(cors());
@@ -15,24 +16,31 @@ const db = new sqlite3.Database('./database.db', (err) => {
     console.error(err.message);
   } else {
     console.log('Connected to the SQLite database.');
-    db.run(`CREATE TABLE IF NOT EXISTS users (username TEXT, embedding TEXT)`);
+    db.run(`CREATE TABLE IF NOT EXISTS users (
+      username TEXT PRIMARY KEY,
+      embedding TEXT
+    )`);
   }
 });
 
-// Registration route
 app.post('/register', (req, res) => {
   const { username, embedding } = req.body;
   db.run(`INSERT INTO users (username, embedding) VALUES (?, ?)`, [username, JSON.stringify(embedding)], (err) => {
     if (err) {
-      res.status(500).send('Error saving user.');
+      if (err.errno === 19) { // SQLite error code for UNIQUE constraint violation
+        res.status(400).send('Username already exists.');
+      } else {
+        res.status(500).send('Error saving user.');
+      }
     } else {
       res.status(200).send('User registered.');
     }
   });
 });
 
+
 // Define the threshold for verification
-const THRESHOLD = 0.5; // Adjust this value as needed
+// Adjust this value as needed
 
 // Verification route
 app.post('/verify', (req, res) => {
@@ -57,9 +65,6 @@ app.post('/verify', (req, res) => {
         return res.status(500).send('Error processing user data.');
       }
 
-      console.log('Saved embedding:', savedEmbedding);
-      console.log('Current embedding:', currentEmbedding);
-
       const distance = euclideanDistance(currentEmbedding, savedEmbedding);
       const isVerified = distance < THRESHOLD; 
 
@@ -72,6 +77,18 @@ app.post('/verify', (req, res) => {
     }
   });
 });
+
+app.get('/api/data', (req, res) => {
+  const query = 'SELECT * FROM users';
+  db.all(query, [], (err, rows) => {
+    if (err) {
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    res.json(rows);
+  });
+});
+
 
 // Function to calculate Euclidean distance between two objects
 function euclideanDistance(a, b) {
