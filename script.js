@@ -1,12 +1,11 @@
 let registeredDescriptor = null;  // To store the registered user's face descriptor
 
-// Load the face-api.js models from the /models folder
+// Load the heavy face-api.js models from the /models folder
 async function loadModels() {
-    await faceapi.nets.tinyFaceDetector.loadFromUri('../weights');
-    await faceapi.nets.faceLandmark68Net.loadFromUri('../weights');
-    await faceapi.nets.faceRecognitionNet.loadFromUri('../weights');
+    await faceapi.nets.ssdMobilenetv1.loadFromUri('../weights');  // Heavy and accurate face detector
+    await faceapi.nets.faceLandmark68Net.loadFromUri('../weights');  // More detailed face landmarks
+    await faceapi.nets.faceRecognitionNet.loadFromUri('../weights');  // Face recognition model
 }
-
 
 // Start video stream from webcam
 async function startVideo() {
@@ -18,17 +17,17 @@ async function startVideo() {
     );
 }
 
-// Detect face and generate embeddings
+// Detect face and generate embeddings using heavy models
 async function detectFaceEmbeddings() {
     const video = document.getElementById('video');
-    const options = new faceapi.TinyFaceDetectorOptions();
+    const options = new faceapi.SsdMobilenetv1Options({ minConfidence: 0.5 });
 
     const detection = await faceapi.detectSingleFace(video, options)
         .withFaceLandmarks()
         .withFaceDescriptor();
 
     if (detection) {
-        const faceDescriptor = detection.descriptor; // Embedding
+        const faceDescriptor = detection.descriptor;  // Embedding
         return faceDescriptor;
     } else {
         console.log("No face detected");
