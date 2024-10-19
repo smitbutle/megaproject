@@ -1,11 +1,12 @@
 let registeredDescriptor = null;  // To store the registered user's face descriptor
 
-// Load the models including MTCNN for face detection
+// Load the face-api.js models from the /models folder
 async function loadModels() {
-    await faceapi.nets.mtcnn.loadFromUri('../weights');  // Load MTCNN for face detection
-    await faceapi.nets.faceLandmark68Net.loadFromUri('../weights');  // More detailed face landmarks
-    await faceapi.nets.faceRecognitionNet.loadFromUri('../weights');  // Face recognition model
+    await faceapi.nets.tinyFaceDetector.loadFromUri('../weights');
+    await faceapi.nets.faceLandmark68Net.loadFromUri('../weights');
+    await faceapi.nets.faceRecognitionNet.loadFromUri('../weights');
 }
+
 
 // Start video stream from webcam
 async function startVideo() {
@@ -17,22 +18,17 @@ async function startVideo() {
     );
 }
 
-// Detect face and generate embeddings using MTCNN for face detection
+// Detect face and generate embeddings
 async function detectFaceEmbeddings() {
     const video = document.getElementById('video');
+    const options = new faceapi.TinyFaceDetectorOptions();
 
-    const mtcnnOptions = new faceapi.MtcnnOptions({
-        minFaceSize: 20,  // Smaller faces will be ignored
-        scaleFactor: 0.709,  // Image scale factor during detection
-        maxNumScales: 10,  // Max scales to apply during pyramid scaling
-    });
-
-    const detection = await faceapi.detectSingleFace(video, mtcnnOptions)
+    const detection = await faceapi.detectSingleFace(video, options)
         .withFaceLandmarks()
         .withFaceDescriptor();
 
     if (detection) {
-        const faceDescriptor = detection.descriptor;  // Embedding
+        const faceDescriptor = detection.descriptor; // Embedding
         return faceDescriptor;
     } else {
         console.log("No face detected");
