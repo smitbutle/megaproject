@@ -7,6 +7,7 @@ const Verify = () => {
   const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(true);
 
+  // One time executes and loads the model from the server
   useEffect(() => {
     async function loadModels() {
       setLoading(true);

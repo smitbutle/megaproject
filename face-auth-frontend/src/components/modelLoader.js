@@ -1,3 +1,5 @@
+// Code to load models from face-api.js library 
+
 import * as faceapi from 'face-api.js';
 
 const MODEL_URL = '/models';

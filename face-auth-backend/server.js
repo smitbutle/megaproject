@@ -4,7 +4,7 @@ const sqlite3 = require('sqlite3').verbose();
 const app = express();
 const cors = require('cors');
 const port = 5000;
-const THRESHOLD = 0.3;
+const THRESHOLD = 0.4;  // Distance threshold for verification if less then user is verified
 
 // Middleware
 app.use(cors());
@@ -78,6 +78,7 @@ app.post('/verify', (req, res) => {
   });
 });
 
+// Get all data from the database for testing purposes
 app.get('/api/data', (req, res) => {
   const query = 'SELECT * FROM users';
   db.all(query, [], (err, rows) => {
