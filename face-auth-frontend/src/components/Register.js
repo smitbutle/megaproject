@@ -15,8 +15,10 @@ const Register = () => {
   const [embedding, setEmbedding] = useState(null);
   const [videoRef, setVideoRef] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLivenessVerified, setIsLivenessVerified] = useState(false);
+  const [noBlinkCount, setNoBlinkCount] = useState(0);
 
-  // One time executes and loads the model from the server
+  // Load face-api.js models
   useEffect(() => {
     async function loadModels() {
       setLoading(true);
@@ -37,6 +39,11 @@ const Register = () => {
 
   // Function to handle the registration process by capturing the face embedding
   const handleRegister = async () => {
+    if (!isLivenessVerified) {
+      alert("Liveness not verified. Please ensure you're not a static image.");
+      return;
+    }
+
     setLoading(true);
     try {
       const video = document.getElementById("videoInput");
@@ -70,7 +77,51 @@ const Register = () => {
   const startVideo = () => {
     navigator.mediaDevices.getUserMedia({ video: {} }).then((stream) => {
       setVideoRef(stream);
+      detectLiveness();
     });
+  };
+
+  // Function to detect liveness by monitoring blinking
+  const detectLiveness = async () => {
+    const video = document.getElementById("videoInput");
+    const blinkThreshold = 200; // number of frames without blinking to consider as non-lively
+    let blinkDetected = false;
+
+    const checkBlinking = async () => {
+      const result = await faceapi.detectSingleFace(video).withFaceLandmarks();
+      if (result) {
+        const landmarks = result.landmarks;
+        const leftEye = landmarks.getLeftEye();
+        const rightEye = landmarks.getRightEye();
+
+        const leftEyeHeight = faceapi.euclideanDistance(leftEye[1], leftEye[5]);
+        const rightEyeHeight = faceapi.euclideanDistance(
+          rightEye[1],
+          rightEye[5]
+        );
+
+        if (leftEyeHeight < 0.03 && rightEyeHeight < 0.03) {
+          // Eye closed (blinking)
+          blinkDetected = true;
+          setNoBlinkCount(0);
+        } else {
+          // Eyes open
+          if (!blinkDetected) {
+            setNoBlinkCount((prev) => prev + 1);
+          }
+        }
+
+        if (noBlinkCount >= blinkThreshold) {
+          setIsLivenessVerified(false);
+          alert("Liveness failed. Please blink or show natural movement.");
+        } else if (blinkDetected) {
+          setIsLivenessVerified(true);
+        }
+      }
+      requestAnimationFrame(checkBlinking);
+    };
+
+    checkBlinking();
   };
 
   return (
@@ -115,9 +166,15 @@ const Register = () => {
               fullWidth
               onClick={handleRegister}
               sx={{ backgroundColor: "#1976d2", color: "#fff", marginTop: 2 }}
+              disabled={!isLivenessVerified}
             >
               Register
             </Button>
+            {!isLivenessVerified && (
+              <Typography color="error" sx={{ marginTop: 2 }}>
+                Liveness not verified. Please blink to continue.
+              </Typography>
+            )}
           </>
         )}
       </Paper>
