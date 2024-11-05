@@ -1,5 +1,7 @@
+// Register.js
 import React, { useState, useEffect } from "react";
 import * as faceapi from "face-api.js";
+import CryptoJS from "crypto-js";
 import {
   Button,
   TextField,
@@ -10,13 +12,19 @@ import {
 } from "@mui/material";
 import axios from "axios";
 
+const encryptionKey = "SIDDHESH"; // Ideally, store this securely
+
+// Function to encrypt data
+const encryptData = (data) => {
+  return CryptoJS.AES.encrypt(JSON.stringify(data), encryptionKey).toString();
+};
+
 const Register = () => {
   const [username, setUsername] = useState("");
   const [embedding, setEmbedding] = useState(null);
   const [videoRef, setVideoRef] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // One time executes and loads the model from the server
   useEffect(() => {
     async function loadModels() {
       setLoading(true);
@@ -35,7 +43,6 @@ const Register = () => {
     loadModels();
   }, []);
 
-  // Function to handle the registration process by capturing the face embedding
   const handleRegister = async () => {
     setLoading(true);
     try {
@@ -47,10 +54,12 @@ const Register = () => {
 
       if (detections) {
         const userEmbedding = detections.descriptor;
-        setEmbedding(userEmbedding);
+        const encryptedEmbedding = encryptData(userEmbedding); // Encrypt embedding
+        setEmbedding(encryptedEmbedding);
+
         await axios.post("http://localhost:5000/register", {
           username,
-          embedding: userEmbedding,
+          embedding: encryptedEmbedding,
         });
         alert("Registration successful!");
       }
@@ -63,10 +72,10 @@ const Register = () => {
       }
     } finally {
       setLoading(false);
+      alert("loading stopeed ??")
     }
   };
 
-  // Start the video stream
   const startVideo = () => {
     navigator.mediaDevices.getUserMedia({ video: {} }).then((stream) => {
       setVideoRef(stream);
@@ -74,6 +83,7 @@ const Register = () => {
   };
 
   return (
+    // JSX remains the same
     <Box
       sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}
     >

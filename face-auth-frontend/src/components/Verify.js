@@ -1,24 +1,38 @@
-import React, { useState, useEffect } from 'react';
-import * as faceapi from 'face-api.js';
-import { Button, TextField, Box, Typography, CircularProgress, Paper } from '@mui/material';
-import axios from 'axios';
+// Verify.js
+import React, { useState, useEffect } from "react";
+import * as faceapi from "face-api.js";
+import CryptoJS from "crypto-js";
+import {
+  Button,
+  TextField,
+  Box,
+  Typography,
+  CircularProgress,
+  Paper,
+} from "@mui/material";
+import axios from "axios";
+
+const encryptionKey = "YOUR_SECRET_KEY_HERE";
+
+const encryptData = (data) => {
+  return CryptoJS.AES.encrypt(JSON.stringify(data), encryptionKey).toString();
+};
 
 const Verify = () => {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // One time executes and loads the model from the server
   useEffect(() => {
     async function loadModels() {
       setLoading(true);
       try {
         await Promise.all([
-          faceapi.nets.ssdMobilenetv1.loadFromUri('/models'),
-          faceapi.nets.faceRecognitionNet.loadFromUri('/models'),
-          faceapi.nets.faceLandmark68Net.loadFromUri('/models')
+          faceapi.nets.ssdMobilenetv1.loadFromUri("/models"),
+          faceapi.nets.faceRecognitionNet.loadFromUri("/models"),
+          faceapi.nets.faceLandmark68Net.loadFromUri("/models"),
         ]);
       } catch (error) {
-        console.error('Error loading models:', error);
+        console.error("Error loading models:", error);
       } finally {
         setLoading(false);
       }
@@ -27,46 +41,48 @@ const Verify = () => {
   }, []);
 
   const handleVerify = async () => {
-    const video = document.getElementById('videoInput');
+    const video = document.getElementById("videoInput");
     const detections = await faceapi.detectSingleFace(video)
       .withFaceLandmarks()
       .withFaceDescriptor();
 
     if (detections) {
       const currentEmbedding = detections.descriptor;
+      const encryptedEmbedding = encryptData(currentEmbedding); // Encrypt embedding
 
       try {
-        const response = await axios.post('http://localhost:5000/verify', {
+        const response = await axios.post("http://localhost:5000/verify", {
           username,
-          currentEmbedding,
+          currentEmbedding: encryptedEmbedding,
         });
         if (response.data.isVerified) {
-          alert('Face verified successfully!');
+          alert("Face verified successfully!");
         } else {
-          alert('Face verification failed.');
+          alert("Face verification failed.");
         }
       } catch (error) {
-        console.error('Error during verification:', error);
-        alert('Verification error occurred. Please try again.');
+        console.error("Error during verification:", error);
+        alert("Verification error occurred. Please try again.");
       }
     } else {
-      console.error('No face detected');
+      console.error("No face detected");
     }
   };
 
   const startVideo = () => {
     navigator.mediaDevices.getUserMedia({ video: {} })
       .then((stream) => {
-        const video = document.getElementById('videoInput');
+        const video = document.getElementById("videoInput");
         video.srcObject = stream;
         video.play();
       })
       .catch((err) => {
-        console.error('Error accessing webcam:', err);
+        console.error("Error accessing webcam:", err);
       });
   };
 
   return (
+    // JSX remains the same
     <Paper sx={{ padding: 4, maxWidth: 480, textAlign: 'center' }}>
       <Typography variant="h5">Verify</Typography>
       {loading ? (
